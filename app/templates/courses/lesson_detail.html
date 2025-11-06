@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <!-- Навигация -->
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Все курсы</a></li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'courses:course_detail' lesson.course.id %}">
+                            {{ lesson.course.title }}
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ lesson.title }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Видео и описание -->
+        <div class="col-lg-8">
+            <h1>{{ lesson.title }}</h1>
+            <div class="ratio ratio-16x9 my-4">
+                <iframe src="https://www.youtube.com/embed/{{ lesson.get_youtube_id }}" 
+                        title="{{ lesson.title }}" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+
+        <!-- Блок с тестом -->
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header">
+                    <h5>Тест к уроку</h5>
+                </div>
+                <div class="card-body">
+                    {% if user.is_authenticated %}
+                        <form id="testForm">
+                            {% csrf_token %}
+                            {% for question in lesson.questions.all %}
+                            <div class="mb-3">
+                                <p><strong>{{ forloop.counter }}. {{ question.text }}</strong></p>
+                                {% for answer in question.answers.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" 
+                                           name="question_{{ question.id }}" 
+                                           id="answer_{{ answer.id }}" 
+                                           value="{{ answer.id }}">
+                                    <label class="form-check-label" for="answer_{{ answer.id }}">
+                                        {{ answer.text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <hr>
+                            {% empty %}
+                            <p class="text-muted">Тест для этого урока пока не добавлен.</p>
+                            {% endfor %}
+                            
+                            {% if lesson.questions.all %}
+                            <button type="submit" class="btn btn-success w-100">Отправить ответы</button>
+                            {% endif %}
+                        </form>
+                        <div id="result" class="mt-3"></div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <a href="{% url 'admin:login' %}?next={{ request.path }}">Войдите</a>, 
+                            чтобы пройти тест.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const testForm = document.getElementById('testForm');
+        if (testForm) {
+            testForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const submitButton = this.querySelector('button[type="submit"]');
+                
+                submitButton.disabled = true;
+                submitButton.textContent = 'Проверка...';
+
+                fetch("{% url 'courses:submit_test' lesson.id %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const resultDiv = document.getElementById('result');
+                    if (data.success) {
+                        const percentage = (data.score / data.total_questions * 100).toFixed(1);
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-success">
+                                <h5>Тест завершен!</h5>
+                                <p>Ваш результат: <strong>${data.score}</strong> из <strong>${data.total_questions}</strong></p>
+                                <p>Процент правильных ответов: <strong>${percentage}%</strong></p>
+                                ${percentage >= 80 ? '<p class="text-success">Отличный результат!</p>' : '<p class="text-warning">Попробуйте еще раз!</p>'}
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `<div class="alert alert-danger">Произошла ошибка при отправке теста.</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('result').innerHTML = 
+                        '<div class="alert alert-danger">Ошибка сети. Попробуйте еще раз.</div>';
+                })
+                .finally(() => {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Отправить ответы';
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero-section text-center mb-5">
+    <div class="container">
+        <h1 class="display-4">Профессиональные курсы по стоматологии</h1>
+        <p class="lead">Повышайте квалификацию с лучшими экспертами индустрии</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="row">
+        {% for course in courses %}
+        <div class="col-md-4 mb-4">
+            <div class="card course-card h-100">
+                <img src="{{ course.image.url }}" class="card-img-top" alt="{{ course.title }}">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ course.title }}</h5>
+                    <p class="card-text flex-grow-1">{{ course.description|truncatewords:20 }}</p>
+                    <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-primary mt-auto">
+                        Подробнее
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">Курсы пока не добавлены.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

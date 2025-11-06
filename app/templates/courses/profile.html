@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1>Личный кабинет</h1>
+            <p class="lead">Добро пожаловать, {{ user.username }}!</p>
+        </div>
+    </div>
+
+    <!-- Прогресс по курсам -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Мои курсы</h3>
+            
+            {% if course_progress %}
+                <div class="row">
+                    {% for progress in course_progress %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ progress.course.title }}</h5>
+                                <p class="text-muted">
+                                    Куплен: {{ progress.purchased_at|date:"d.m.Y" }}
+                                </p>
+                                
+                                <div class="progress mb-3" style="height: 20px;">
+                                    <div class="progress-bar {% if progress.progress_percentage == 100 %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ progress.progress_percentage }}%"
+                                         aria-valuenow="{{ progress.progress_percentage }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ progress.progress_percentage }}%
+                                    </div>
+                                </div>
+                                
+                                <p>
+                                    Пройдено: {{ progress.completed_lessons }} из {{ progress.total_lessons }} уроков
+                                </p>
+                                
+                                <a href="{% url 'courses:course_progress_detail' progress.course.id %}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    Детальная статистика
+                                </a>
+                                <a href="{% url 'courses:course_detail' progress.course.id %}" 
+                                   class="btn btn-primary btn-sm">
+                                    Продолжить обучение
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    У вас пока нет активных курсов. После оплаты курса администратор предоставит вам доступ.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Последние результаты тестов -->
+    {% if recent_results %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Последние результаты тестов</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Урок</th>
+                            <th>Результат</th>
+                            <th>Процент</th>
+                            <th>Дата</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in recent_results %}
+                        <tr>
+                            <td>{{ result.lesson.title }}</td>
+                            <td>{{ result.score }}/{{ result.total_questions }}</td>
+                            <td>
+                                <span class="badge {% if result.get_percentage >= 80 %}bg-success{% elif result.get_percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ result.get_percentage }}%
+                                </span>
+                            </td>
+                            <td>{{ result.completed_at|date:"d.m.Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
