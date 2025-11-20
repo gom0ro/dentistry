@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ComfortDentall - Онлайн-курсы{% endblock %}</title>
+
+    {% load static %}
+    {% load widget_tweaks %}
+    
+    <!-- Bootstrap & FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Общие стили -->
+    <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+    
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #4cc9f0;
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --text-light: #ffffff;
+            --text-dark: #2b2d42;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        /* Улучшенный навбар */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            padding: 0.8rem 0;
+            transition: var(--transition);
+        }
+
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-color) !important;
+            display: flex;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .navbar-brand:hover {
+            transform: translateY(-1px);
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: var(--text-dark) !important;
+            padding: 0.5rem 1rem !important;
+            margin: 0 0.2rem;
+            border-radius: 8px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-color) !important;
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        .nav-link.active {
+            color: var(--primary-color) !important;
+            background: rgba(67, 97, 238, 0.1);
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: var(--gradient-primary);
+            transition: var(--transition);
+            transform: translateX(-50%);
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 70%;
+        }
+
+        /* Кнопки */
+        .btn-outline-primary {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 500;
+            border-radius: 8px;
+            padding: 0.5rem 1.2rem;
+            transition: var(--transition);
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--gradient-primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        /* Уведомления */
+        .notification-badge {
+            font-size: 0.7rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Аватар пользователя */
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid transparent;
+            transition: var(--transition);
+        }
+
+        .user-avatar:hover {
+            border-color: var(--primary-color);
+        }
+
+        .avatar-placeholder {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Выпадающие меню */
+        .dropdown-menu {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .dropdown-item {
+            border-radius: 6px;
+            padding: 0.6rem 1rem;
+            margin: 0.1rem 0;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+        }
+
+        .dropdown-item:hover {
+            background: var(--gradient-primary);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        /* Улучшенное бургер-меню */
+        .navbar-toggler {
+            border: none;
+            padding: 0.4rem 0.6rem;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .navbar-toggler:focus {
+            box-shadow: none;
+            background: rgba(67, 97, 238, 0.1);
+        }
+
+        .navbar-toggler:hover {
+            background: rgba(67, 97, 238, 0.1);
+        }
+
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2867, 97, 238, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+
+        /* Мобильное меню */
+        @media (max-width: 991.98px) {
+            .navbar-collapse {
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                margin-top: 1rem;
+                padding: 1rem;
+            }
+
+            .navbar-nav {
+                text-align: center;
+                width: 100%;
+            }
+
+            .nav-item {
+                margin: 0.3rem 0;
+            }
+
+            .nav-link {
+                padding: 0.8rem 1.5rem !important;
+                font-size: 1.1rem;
+                justify-content: center;
+                display: flex;
+                align-items: center;
+                margin: 0.2rem 0;
+            }
+
+            .dropdown-menu {
+                text-align: center;
+                background: rgba(248, 249, 250, 0.95);
+                border: none;
+                box-shadow: none;
+                margin: 0.5rem auto;
+                width: 90%;
+            }
+
+            .dropdown-item {
+                justify-content: center;
+                text-align: center;
+            }
+
+            .navbar-nav.align-items-center {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .notification-dropdown {
+                order: -1;
+            }
+
+            .user-menu {
+                margin-top: 1rem;
+                padding-top: 1rem;
+                border-top: 1px solid rgba(0, 0, 0, 0.1);
+                width: 100%;
+            }
+
+            .user-menu .nav-item {
+                width: 100%;
+            }
+
+            .user-menu .dropdown-menu {
+                width: 100%;
+            }
+
+            .btn-outline-primary {
+                width: 100%;
+                text-align: center;
+                justify-content: center;
+            }
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: var(--gradient-hero);
+            color: var(--text-light);
+            overflow: hidden;
+            padding: 100px 0 80px;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" opacity="0.1"><path fill="white" d="M0,0V800H1200V0ZM150,650C66.72,650,0,583.28,0,500S66.72,350,150,350,300,416.72,300,500,233.28,650,150,650Zm450,50c-41.42,0-75-33.58-75-75s33.58-75,75-75,75,33.58,75,75S641.42,700,600,700Zm450-50c-41.42,0-75-33.58-75-75s33.58-75,75-75,75,33.58,75,75S1091.42,650,1050,650Z"/></svg>');
+            background-size: cover;
+            opacity: 0.1;
+        }
+
+        .hero .container {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .hero p {
+            font-size: 1.4rem;
+            margin-bottom: 2.5rem;
+            max-width: 600px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .btn-hero {
+            display: inline-block;
+            padding: 15px 40px;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: var(--transition);
+            box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn-hero:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(67, 97, 238, 0.4);
+            color: white;
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ffffff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" opacity="0.03"><path fill="white" d="M0,0V120H1200V0ZM200,80C150,80,110,50,110,10S150,-60,200,-60,290,-30,290,10,250,80,200,80Zm400,20c-60,0-110-50-110-110S540,-120,600,-120,710,-70,710,-10S660,100,600,100Zm400-20c-60,0-110-50-110-110S940,-100,1000,-100,1110,-50,1110,10S1060,80,1000,80Z"/></svg>');
+            background-size: cover;
+        }
+
+        .footer-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .footer-brand {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4cc9f0, #4361ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .hero {
+                text-align: center;
+                padding: 120px 0 60px;
+            }
+
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            .btn-hero {
+                padding: 12px 30px;
+                font-size: 1rem;
+            }
+        }
+
+        .bx {
+            font-family: 'boxicons' !important;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-tooth me-2"></i>ComfortDentall
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Переключить навигацию">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">О нас</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#courses">Курсы</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#testimonials">Отзывы</a>
+                    </li>
+                </ul>
+
+                <div class="navbar-nav align-items-center">
+                    {% if user.is_authenticated %}
+                        <!-- Уведомления -->
+                        <div class="nav-item dropdown me-2 notification-dropdown">
+                            <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown">
+                                <i class="fas fa-bell"></i>
+                                {% if notifications_count %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                                        {{ notifications_count }}
+                                    </span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                {% if notifications %}
+                                    {% for notification in notifications %}
+                                        <li>
+                                            <a class="dropdown-item" href="{{ notification.link }}">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <small class="text-muted">{{ notification.time }}</small>
+                                                </div>
+                                                <p class="mb-1">{{ notification.message }}</p>
+                                            </a>
+                                        </li>
+                                        {% if not forloop.last %}
+                                            <li><hr class="dropdown-divider"></li>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <li><a class="dropdown-item text-muted" href="#">Нет новых уведомлений</a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        
+                        <!-- Профиль пользователя -->
+                        <div class="nav-item dropdown user-menu">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown">
+                                {% if user.profile.avatar %}
+                                    <img src="{{ user.profile.avatar.url }}" alt="Аватар" class="user-avatar me-2">
+                                {% else %}
+                                    <div class="avatar-placeholder me-2">
+                                        {{ user.username|first|upper }}
+                                    </div>
+                                {% endif %}
+                                <span>{{ user.username }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'courses:profile' %}">
+                                    <i class="fas fa-user me-2"></i>Личный кабинет
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="post" action="{% url 'courses:logout' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item border-0 bg-transparent w-100 text-start">
+                                            <i class="fas fa-sign-out-alt me-2"></i>Выйти
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <!-- Кнопки входа и регистрации -->
+                        <div class="d-flex gap-2">
+                            <a class="btn btn-outline-primary" href="{% url 'courses:login' %}">
+                                <i class="fas fa-sign-in-alt me-1"></i>Войти
+                            </a>
+                            <a class="btn btn-primary" href="{% url 'courses:register' %}" style="background: var(--gradient-primary); border: none;">
+                                <i class="fas fa-user-plus me-1"></i>Регистрация
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer pt-5 pb-4">
+        <div class="container footer-content">
+            <div class="row">
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="footer-brand">
+                        <i class="fas fa-tooth me-2"></i>ComfortDentall
+                    </div>
+                    <p class="text-muted">
+                        Профессиональная образовательная платформа для стоматологов. 
+                        Современные курсы, практические навыки и передовые методики 
+                        для вашего профессионального роста.
+                    </p>
+                    <div class="social-links d-flex gap-2">
+                        <a href="https://t.me/Comfort_dental_bot" class="btn btn-outline-light btn-sm" target="_blank">
+                            <i class="fab fa-telegram"></i>
+                        </a>
+                        <a href="https://wa.me/7064275444" class="btn btn-outline-light btn-sm" target="_blank">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                        <a href="https://www.youtube.com/@CoMFoRT-2022" class="btn btn-outline-light btn-sm" target="_blank">
+                            <i class="fab fa-youtube"></i>
+                        </a>
+                        <a href="https://www.instagram.com/comfort_dentall/" class="btn btn-outline-light btn-sm" target="_blank">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h5 class="text-white">Курсы</h5>
+                    <div class="d-flex flex-column gap-2">
+                        <a href="#orthodontics" class="text-muted text-decoration-none">Ортодонтия</a>
+                        <a href="#implantology" class="text-muted text-decoration-none">Имплантология</a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h5 class="text-white">Навигация</h5>
+                    <div class="d-flex flex-column gap-2">
+                        <a href="/" class="text-muted text-decoration-none">Главная</a>
+                        <a href="#about" class="text-muted text-decoration-none">О нас</a>
+                        <a href="#courses" class="text-muted text-decoration-none">Все курсы</a>
+                        <a href="#testimonials" class="text-muted text-decoration-none">Отзывы</a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <h5 class="text-white">Контакты</h5>
+                    <div class="text-muted">
+                        <p><i class="fas fa-map-marker-alt me-2"></i>г Шымкент, район Каратау, ж.м Cайрам, улица Амир Темир 99A</p>
+                        <p><i class="fas fa-phone me-2"></i>+7 (708) 294-56-54</p>
+                        <p><i class="fas fa-envelope me-2"></i>info@comfortdentall.com</p>
+                        <p><i class="fas fa-clock me-2"></i>Пн-Пт: 9:00-18:00<br>Сб-Вс: 10:00-16:00</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom border-top pt-3 mt-3">
+                <div class="row align-items-center">
+                    <div class="col-md-12">
+                        <div class="text-center text-muted">
+                            &copy; 2024 ComfortDentall. Все права защищены.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Инициализация AOS
+        AOS.init({ 
+            duration: 800, 
+            once: true,
+            offset: 100
+        });
+        
+        // Эффект при прокрутке для навбара
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+        
+        // Подсветка активного пункта меню
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentLocation = location.href;
+            const menuItems = document.querySelectorAll('.nav-link');
+            
+            menuItems.forEach(item => {
+                if (item.href === currentLocation) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

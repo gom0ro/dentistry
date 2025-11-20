@@ -1,81 +1,51 @@
 from django.contrib import admin
-from .models import Course, Lesson, Question, Answer, UserCourseAccess, UserProgress, TestResult
+from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin
+from .models import Course, Lesson, Question, UserCourseAccess, UserProgress, TestResult, CourseApplication
 
-# ----------------------
-# Встроенные ответы для вопросов
-# ----------------------
-class AnswerInline(admin.TabularInline):
-    model = Answer
-    extra = 4
-    verbose_name = "Ответ"
-    verbose_name_plural = "Ответы"
-
-# ----------------------
-# Вопросы
-# ----------------------
-class QuestionAdmin(admin.ModelAdmin):
-    inlines = [AnswerInline]
-    list_display = ['text', 'course_title']
-    
-    def course_title(self, obj):
-        return obj.lesson.course.title
-    course_title.short_description = "Курс"
-
-# ----------------------
-# Встроенные уроки для курса
-# ----------------------
-class LessonInline(admin.TabularInline):
-    model = Lesson
-    extra = 1
-    verbose_name = "Урок"
-    verbose_name_plural = "Уроки"
-
-# ----------------------
-# Курсы
-# ----------------------
+# Базовые админ-классы без сложных полей
+@admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    inlines = [LessonInline]
-    list_display = ['title', 'price', 'is_active', 'created_at']
-    list_display_links = ['title']
-    list_filter = ['is_active', 'created_at']
-    search_fields = ['title']
-    verbose_name = "Курс"
-    verbose_name_plural = "Курсы"
+    list_display = ['title', 'created_at']
+    search_fields = ['title', 'description']
 
-# ----------------------
-# Доступ пользователей к курсу
-# ----------------------
+@admin.register(Lesson)
+class LessonAdmin(admin.ModelAdmin):
+    list_display = ['title', 'course']
+    list_filter = ['course']
+    search_fields = ['title', 'content']
+
+@admin.register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ['text', 'lesson']
+    list_filter = ['lesson__course']
+    search_fields = ['text']
+
+@admin.register(UserCourseAccess)
 class UserCourseAccessAdmin(admin.ModelAdmin):
-    list_display = ['user', 'course', 'purchased_at', 'is_active']
-    list_filter = ['is_active', 'purchased_at']
+    list_display = ['user', 'course', 'purchased_at']
+    list_filter = ['course']
     search_fields = ['user__username', 'course__title']
-    verbose_name = "Доступ пользователя к курсу"
-    verbose_name_plural = "Доступы пользователей к курсам"
 
-# ----------------------
-# Прогресс пользователей
-# ----------------------
+@admin.register(UserProgress)
 class UserProgressAdmin(admin.ModelAdmin):
-    list_display = ['user', 'lesson', 'is_completed', 'completed_at']
-    list_filter = ['is_completed', 'completed_at']
-    verbose_name = "Прогресс пользователя"
-    verbose_name_plural = "Прогресс пользователей"
+    list_display = ['user', 'lesson']
+    list_filter = ['lesson__course']
+    search_fields = ['user__username', 'lesson__title']
 
-# ----------------------
-# Результаты тестов
-# ----------------------
+@admin.register(TestResult)
 class TestResultAdmin(admin.ModelAdmin):
-    list_display = ['user', 'lesson', 'score', 'total_questions', 'get_percentage', 'completed_at']
-    list_filter = ['completed_at']
-    verbose_name = "Результат теста"
-    verbose_name_plural = "Результаты тестов"
+    list_display = ['user', 'lesson', 'score', 'total_questions']
+    list_filter = ['lesson__course']
+    search_fields = ['user__username', 'lesson__title']
 
-# ----------------------
-# Регистрация моделей в админке
-# ----------------------
-admin.site.register(Course, CourseAdmin)
-admin.site.register(Lesson)
-admin.site.register(Question, QuestionAdmin)
-admin.site.register(UserCourseAccess, UserCourseAccessAdmin)
-admin.site.register(UserProgress, UserProgressAdmin)
-admin.site.register(TestResult, TestResultAdmin)
+@admin.register(CourseApplication)
+class CourseApplicationAdmin(admin.ModelAdmin):
+    list_display = ['name', 'phone', 'course', 'status', 'created_at']
+    list_filter = ['status', 'course']
+    search_fields = ['name', 'phone', 'email', 'course__title']
+
+# Настройки админки
+admin.site.site_header = "ComfortDentall - Администрирование"
+admin.site.site_title = "ComfortDentall Admin"
+admin.site.index_title = "Панель управления"

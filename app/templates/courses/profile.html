@@ -1,99 +1,810 @@
-{% extends 'base.html' %}
+{% extends 'app/base.html' %}
+{% load static %}
+{% load course_tags %}
+{% block title %}Профиль — ComfortDentall{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<style>
+:root {
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --primary-light: #e0e7ff;
+    --success: #10b981;
+    --success-light: #d1fae5;
+    --warning: #f59e0b;
+    --warning-light: #fef3c7;
+    --info: #06b6d4;
+    --info-light: #cffafe;
+    --bg-light: #f8fafc;
+    --bg-white: #ffffff;
+    --text-dark: #1e293b;
+    --text-gray: #64748b;
+    --text-light: #94a3b8;
+    --border: #e2e8f0;
+    --radius-lg: 20px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Общие стили */
+.minimal-profile {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Header */
+.profile-header {
+    background: linear-gradient(135deg, var(--primary), var(--info));
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    margin-bottom: 2rem;
+    color: white;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.profile-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    position: relative;
+}
+
+.profile-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    position: relative;
+}
+
+/* Widgets Grid */
+.widgets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.widget {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: var(--transition);
+    border: 1px solid var(--border);
+}
+
+.widget:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-xl);
+}
+
+.widget-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.widget:nth-child(1) .widget-icon {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.widget:nth-child(2) .widget-icon {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.widget:nth-child(3) .widget-icon {
+    background: var(--info-light);
+    color: var(--info);
+}
+
+.widget:nth-child(4) .widget-icon {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
+.widget-content {
+    flex: 1;
+}
+
+.widget-value {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.widget-label {
+    font-size: 0.95rem;
+    color: var(--text-gray);
+    font-weight: 500;
+}
+
+/* Sections */
+.section {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.section-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-title::before {
+    content: '';
+    width: 4px;
+    height: 24px;
+    background: var(--primary);
+    border-radius: 2px;
+}
+
+.section-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.tag {
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid var(--border);
+    background: var(--bg-light);
+    color: var(--text-gray);
+}
+
+.tag.active,
+.tag:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* Courses Grid */
+.courses-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.course-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    transition: var(--transition);
+    background: var(--bg-white);
+}
+
+.course-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-light);
+}
+
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.course-title {
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0;
+    flex: 1;
+}
+
+.course-tags {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.course-tag {
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.course-tag.completed {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.course-tag.active {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.course-tag.date {
+    background: var(--bg-light);
+    color: var(--text-gray);
+}
+
+/* Progress Section */
+.progress-section {
+    margin-bottom: 1.5rem;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.progress-text {
+    font-size: 0.95rem;
+    color: var(--text-gray);
+    font-weight: 500;
+}
+
+.progress-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.progress-track {
+    height: 8px;
+    background: var(--bg-light);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 4px;
+    transition: width 0.8s ease;
+    position: relative;
+}
+
+.progress-fill.completed {
+    background: var(--success);
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer 2s infinite;
+}
+
+.progress-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+    color: var(--text-gray);
+}
+
+.lessons {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lessons::before {
+    font-size: 0.8rem;
+}
+
+/* Course Actions */
+.course-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.btn-secondary {
+    background: var(--bg-light);
+    color: var(--text-dark);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: var(--border);
+    transform: translateY(-1px);
+}
+
+/* Results Grid */
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.result-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    transition: var(--transition);
+    background: var(--bg-white);
+}
+
+.result-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.result-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0;
+    flex: 1;
+}
+
+.result-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.result-tag {
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.result-tag.score.excellent {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.result-tag.score.good {
+    background: var(--info-light);
+    color: var(--info);
+}
+
+.result-tag.score.average {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
+.result-tag.score.poor {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.result-tag.date {
+    background: var(--bg-light);
+    color: var(--text-gray);
+}
+
+.result-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.result-score {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.score-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.score-label {
+    font-size: 0.875rem;
+    color: var(--text-gray);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    border: 2px dashed var(--border);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: var(--text-dark);
+    margin-bottom: 0.75rem;
+}
+
+.empty-state p {
+    color: var(--text-gray);
+    margin-bottom: 2rem;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Animations */
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .minimal-profile {
+        padding: 1rem 0.5rem;
+    }
+    
+    .profile-header {
+        padding: 2rem 1rem;
+    }
+    
+    .profile-title {
+        font-size: 2rem;
+    }
+    
+    .section {
+        padding: 1.5rem;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .course-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .course-actions {
+        width: 100%;
+    }
+    
+    .course-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .widget {
+        padding: 1.5rem;
+    }
+    
+    .widget-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .widgets-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .course-tags {
+        width: 100%;
+    }
+    
+    .result-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <h1>Личный кабинет</h1>
-            <p class="lead">Добро пожаловать, {{ user.username }}!</p>
+<div class="minimal-profile">
+    <!-- Header -->
+    <div class="profile-header">
+        <div class="header-content">
+            <h1 class="profile-title">Профиль</h1>
+            <p class="profile-subtitle">Ваш прогресс обучения</p>
         </div>
     </div>
 
-    <!-- Прогресс по курсам -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <h3>Мои курсы</h3>
-            
-            {% if course_progress %}
-                <div class="row">
-                    {% for progress in course_progress %}
-                    <div class="col-md-6 mb-4">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ progress.course.title }}</h5>
-                                <p class="text-muted">
-                                    Куплен: {{ progress.purchased_at|date:"d.m.Y" }}
-                                </p>
-                                
-                                <div class="progress mb-3" style="height: 20px;">
-                                    <div class="progress-bar {% if progress.progress_percentage == 100 %}bg-success{% endif %}" 
-                                         role="progressbar" 
-                                         style="width: {{ progress.progress_percentage }}%"
-                                         aria-valuenow="{{ progress.progress_percentage }}" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100">
-                                        {{ progress.progress_percentage }}%
-                                    </div>
-                                </div>
-                                
-                                <p>
-                                    Пройдено: {{ progress.completed_lessons }} из {{ progress.total_lessons }} уроков
-                                </p>
-                                
-                                <a href="{% url 'courses:course_progress_detail' progress.course.id %}" 
-                                   class="btn btn-outline-primary btn-sm">
-                                    Детальная статистика
-                                </a>
-                                <a href="{% url 'courses:course_detail' progress.course.id %}" 
-                                   class="btn btn-primary btn-sm">
-                                    Продолжить обучение
-                                </a>
-                            </div>
+    <!-- Widgets -->
+    <div class="widgets-grid">
+        <div class="widget">
+            <div class="widget-icon">
+                <i class='bx bx-book-alt'></i>
+            </div>
+            <div class="widget-content">
+                <div class="widget-value">{{ course_progress|length }}</div>
+                <div class="widget-label">Курсы</div>
+            </div>
+        </div>
+        <div class="widget">
+            <div class="widget-icon">
+                <i class='bx bx-trending-up'></i>
+            </div>
+            <div class="widget-content">
+                <div class="widget-value">
+                    {% if course_progress %}
+                        {{ course_progress.0.progress_percentage }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </div>
+                <div class="widget-label">Прогресс</div>
+            </div>
+        </div>
+        <div class="widget">
+            <div class="widget-icon">
+                <i class='bx bx-clipboard'></i>
+            </div>
+            <div class="widget-content">
+                <div class="widget-value">{{ recent_results|length }}</div>
+                <div class="widget-label">Тесты</div>
+            </div>
+        </div>
+        <div class="widget">
+            <div class="widget-icon">
+                <i class='bx bx-star'></i>
+            </div>
+            <div class="widget-content">
+                <div class="widget-value">
+                    {% if recent_results %}
+                        {% with recent_results.0 as latest_result %}
+                            {{ latest_result.get_percentage }}%
+                        {% endwith %}
+                    {% else %}
+                        0%
+                    {% endif %}
+                </div>
+                <div class="widget-label">Результат</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Courses Section -->
+    <div class="section">
+        <div class="section-header">
+            <h2 class="section-title">Мои курсы</h2>
+            <div class="section-tags">
+                <span class="tag active">Все</span>
+                <span class="tag">В процессе</span>
+                <span class="tag">Завершённые</span>
+            </div>
+        </div>
+
+        {% if course_progress %}
+            <div class="courses-grid">
+                {% for progress in course_progress %}
+                <div class="course-card">
+                    <div class="course-header">
+                        <h3 class="course-title">{{ progress.course.title }}</h3>
+                        <div class="course-tags">
+                            <span class="course-tag {% if progress.progress_percentage == 100 %}completed{% else %}active{% endif %}">
+                                {% if progress.progress_percentage == 100 %}Завершён{% else %}Активный{% endif %}
+                            </span>
+                            <span class="course-tag date">{{ progress.purchased_at|date:"d.m.Y" }}</span>
                         </div>
                     </div>
-                    {% endfor %}
+                    <div class="progress-section">
+                        <div class="progress-header">
+                            <span class="progress-text">Прогресс</span>
+                            <span class="progress-value">{{ progress.progress_percentage }}%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill {% if progress.progress_percentage == 100 %}completed{% endif %}" 
+                                 style="width: {{ progress.progress_percentage }}%"></div>
+                        </div>
+                        <div class="progress-meta">
+                            <span class="lessons">{{ progress.completed_lessons }}/{{ progress.total_lessons }} уроков</span>
+                        </div>
+                    </div>
+                    <div class="course-actions">
+                        <a href="{% url 'courses:course_progress_detail' progress.course.id %}" class="btn btn-secondary">
+                            <i class='bx bx-stats'></i>
+                            Статистика
+                        </a>
+                        <a href="{% url 'courses:course_detail' progress.course.id %}" class="btn btn-primary">
+                            <i class='bx bx-{% if progress.progress_percentage == 0 %}play{% else %}right-arrow-alt{% endif %}'></i>
+                            {% if progress.progress_percentage == 0 %}Начать{% else %}Продолжить{% endif %}
+                        </a>
+                    </div>
                 </div>
-            {% else %}
-                <div class="alert alert-info">
-                    У вас пока нет активных курсов. После оплаты курса администратор предоставит вам доступ.
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class='bx bx-book-open' style="font-size: 4rem; opacity: 0.5;"></i>
                 </div>
-            {% endif %}
-        </div>
+                <h3>Нет активных курсов</h3>
+                <p>После оплаты курса администратор предоставит доступ</p>
+                <a href="{% url 'courses:course_list' %}" class="btn btn-primary">
+                    <i class='bx bx-search-alt'></i>
+                    Выбрать курс
+                </a>
+            </div>
+        {% endif %}
     </div>
 
-    <!-- Последние результаты тестов -->
+    <!-- Test Results Section -->
     {% if recent_results %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <h3>Последние результаты тестов</h3>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Урок</th>
-                            <th>Результат</th>
-                            <th>Процент</th>
-                            <th>Дата</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for result in recent_results %}
-                        <tr>
-                            <td>{{ result.lesson.title }}</td>
-                            <td>{{ result.score }}/{{ result.total_questions }}</td>
-                            <td>
-                                <span class="badge {% if result.get_percentage >= 80 %}bg-success{% elif result.get_percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
-                                    {{ result.get_percentage }}%
-                                </span>
-                            </td>
-                            <td>{{ result.completed_at|date:"d.m.Y H:i" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="section">
+        <div class="section-header">
+            <h2 class="section-title">Результаты тестов</h2>
+            <div class="section-tags">
+                <span class="tag active">Все</span>
+                <span class="tag">Высокие</span>
+                <span class="tag">Средние</span>
             </div>
+        </div>
+
+        <div class="results-grid">
+            {% for result in recent_results %}
+            <div class="result-card">
+                <div class="result-header">
+                    <h4 class="result-title">{{ result.lesson.title }}</h4>
+                    <div class="result-tags">
+                        <span class="result-tag score {{ result.get_percentage|score_class }}">
+                            {{ result.get_percentage }}%
+                        </span>
+                        <span class="result-tag date">{{ result.completed_at|date:"d.m.Y" }}</span>
+                    </div>
+                </div>
+                <div class="result-content">
+                    <div class="result-score">
+                        <span class="score-value">{{ result.score }}/{{ result.total_questions }}</span>
+                        <span class="score-label">правильных ответов</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/profile.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация прогресс-баров
+    const progressBars = document.querySelectorAll('.progress-fill');
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0';
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 100);
+    });
+
+    // Интерактивные теги
+    const tags = document.querySelectorAll('.tag');
+    tags.forEach(tag => {
+        tag.addEventListener('click', function() {
+            tags.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // Анимация при скролле
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    // Наблюдаем за карточками
+    const cards = document.querySelectorAll('.course-card, .result-card, .widget');
+    cards.forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(card);
+    });
+});
+</script>
 {% endblock %}

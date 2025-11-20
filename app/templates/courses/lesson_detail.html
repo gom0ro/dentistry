@@ -1,78 +1,196 @@
-{% extends 'base.html' %}
+{% extends 'app/base.html' %}
+{% load static %}
+{% load math_filters %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row">
-        <!-- Навигация -->
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Все курсы</a></li>
-                    <li class="breadcrumb-item">
-                        <a href="{% url 'courses:course_detail' lesson.course.id %}">
-                            {{ lesson.course.title }}
-                        </a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ lesson.title }}</li>
-                </ol>
+<div class="lesson-modern-container">
+    <!-- Navigation Header -->
+    <div class="lesson-navigation">
+        <div class="container">
+            <nav class="breadcrumb-nav">
+                <a href="{% url 'courses:course_list' %}" class="breadcrumb-link">
+                    <i class='bx bx-book-alt'></i>
+                    Все курсы
+                </a>
+                <i class='bx bx-chevron-right breadcrumb-divider'></i>
+                <a href="{% url 'courses:course_detail' lesson.course.id %}" class="breadcrumb-link">
+                    <i class='bx bx-collection'></i>
+                    {{ lesson.course.title }}
+                </a>
+                <i class='bx bx-chevron-right breadcrumb-divider'></i>
+                <span class="breadcrumb-current">
+                    <i class='bx bx-video'></i>
+                    {{ lesson.title }}
+                </span>
             </nav>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Видео и описание -->
-        <div class="col-lg-8">
-            <h1>{{ lesson.title }}</h1>
-            <div class="ratio ratio-16x9 my-4">
-                <iframe src="https://www.youtube.com/embed/{{ lesson.get_youtube_id }}" 
-                        title="{{ lesson.title }}" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowfullscreen>
-                </iframe>
-            </div>
-        </div>
-
-        <!-- Блок с тестом -->
-        <div class="col-lg-4">
-            <div class="card sticky-top" style="top: 20px;">
-                <div class="card-header">
-                    <h5>Тест к уроку</h5>
-                </div>
-                <div class="card-body">
-                    {% if user.is_authenticated %}
-                        <form id="testForm">
-                            {% csrf_token %}
-                            {% for question in lesson.questions.all %}
-                            <div class="mb-3">
-                                <p><strong>{{ forloop.counter }}. {{ question.text }}</strong></p>
-                                {% for answer in question.answers.all %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" 
-                                           name="question_{{ question.id }}" 
-                                           id="answer_{{ answer.id }}" 
-                                           value="{{ answer.id }}">
-                                    <label class="form-check-label" for="answer_{{ answer.id }}">
-                                        {{ answer.text }}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            <hr>
-                            {% empty %}
-                            <p class="text-muted">Тест для этого урока пока не добавлен.</p>
-                            {% endfor %}
-                            
-                            {% if lesson.questions.all %}
-                            <button type="submit" class="btn btn-success w-100">Отправить ответы</button>
-                            {% endif %}
-                        </form>
-                        <div id="result" class="mt-3"></div>
-                    {% else %}
-                        <div class="alert alert-warning">
-                            <a href="{% url 'admin:login' %}?next={{ request.path }}">Войдите</a>, 
-                            чтобы пройти тест.
+    <!-- Main Content -->
+    <div class="container">
+        <div class="lesson-layout">
+            <!-- Video Section -->
+            <div class="video-section">
+                <div class="video-header">
+                    <div class="lesson-meta">
+                        <div class="course-badge">
+                            <i class='bx bx-play-circle'></i>
+                            Урок {{ lesson.order }}
                         </div>
-                    {% endif %}
+                        <div class="duration-badge">
+                            <i class='bx bx-time'></i>
+                            {% if lesson.duration %}{{ lesson.duration }}{% else %}30 мин{% endif %}
+                        </div>
+                    </div>
+                    <h1 class="lesson-title">{{ lesson.title }}</h1>
+                    <p class="lesson-description">{{ lesson.description|default:"Практический урок с тестированием знаний" }}</p>
+                </div>
+
+                <div class="video-player-container">
+                    <div class="video-wrapper">
+                        <div class="video-placeholder">
+                            <div class="video-overlay">
+                                <div class="play-button">
+                                    <i class='bx bx-play'></i>
+                                </div>
+                                <div class="video-loading">
+                                    <div class="loading-spinner"></div>
+                                    <span>Загрузка видео...</span>
+                                </div>
+                            </div>
+                           <iframe 
+    src="https://drive.google.com/file/d/1GV1psenfoKwglpyuMoQe-RzzvfUwC0Wu/preview"
+    width="640" 
+    height="480" 
+    allow="autoplay" 
+    allowfullscreen>
+</iframe>
+
+                        </div>
+                    </div>
+                    
+                    <!-- Video Controls -->
+                    <div class="video-controls">
+                        <div class="control-group">
+                            <button class="control-btn" id="prevLesson">
+                                <i class='bx bx-chevron-left'></i>
+                                Предыдущий
+                            </button>
+                            <button class="control-btn" id="nextLesson">
+                                Следующий
+                                <i class='bx bx-chevron-right'></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Кнопка Пройти тест -->
+                        <div class="test-button-container">
+                            <a href="{% url 'courses:take_test' lesson.id %}" class="take-test-btn">
+                                <i class='bx bx-task'></i>
+                                <span>Пройти тест</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Конспект урока -->
+                {% if lesson.text_content %}
+                <div class="lesson-summary-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class='bx bx-notepad'></i>
+                        </div>
+                        <div class="section-info">
+                            <h3>Конспект урока</h3>
+                            <p>Ключевые моменты и основные тезисы урока</p>
+                        </div>
+                    </div>
+                    <div class="summary-content">
+                        {{ lesson.text_content|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Что вы узнаете -->
+                {% if lesson.outcomes.all %}
+                <div class="outcomes-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class='bx bx-target-lock'></i>
+                        </div>
+                        <div class="section-info">
+                            <h3>Что вы узнаете</h3>
+                            <p>Ключевые навыки и знания, которые вы получите после этого урока</p>
+                        </div>
+                    </div>
+                    <div class="outcomes-list">
+                        {% for outcome in lesson.outcomes.all %}
+                        <div class="outcome-item">
+                            <div class="outcome-check">
+                                <i class='bx bx-check'></i>
+                            </div>
+                            <span class="outcome-text">{{ outcome.text }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Sidebar Section -->
+            <div class="sidebar-section">
+                <!-- Progress Card -->
+                <div class="progress-card">
+                    <div class="progress-header">
+                        <div class="progress-icon">
+                            <i class='bx bx-trending-up'></i>
+                        </div>
+                        <div class="progress-info">
+                            <h3>Ваш прогресс</h3>
+                            <p>Следите за своим обучением</p>
+                        </div>
+                    </div>
+                    <div class="progress-content">
+                        <div class="progress-circle">
+                            <div class="circle-bg"></div>
+                            <div class="circle-progress"></div>
+                            <div class="progress-text">
+                                <span class="progress-percent">0%</span>
+                                <span class="progress-label">пройдено</span>
+                            </div>
+                        </div>
+                        <div class="progress-stats">
+                            <div class="stat-item">
+                                <i class='bx bx-play-circle'></i>
+                                <span>Просмотрено: 0%</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class='bx bx-check-circle'></i>
+                                <span>Тест: Не пройден</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lesson Navigation -->
+                <div class="lesson-navigation-card">
+                    <h4>Навигация по курсу</h4>
+                    <div class="navigation-list">
+                        <a href="{% url 'courses:course_detail' lesson.course.id %}" class="nav-item">
+                            <i class='bx bx-list-ul'></i>
+                            <span>Все уроки курса</span>
+                            <i class='bx bx-chevron-right'></i>
+                        </a>
+                        <a href="{% url 'courses:profile' %}" class="nav-item">
+                            <i class='bx bx-user'></i>
+                            <span>Мой прогресс</span>
+                            <i class='bx bx-chevron-right'></i>
+                        </a>
+                        <a href="{% url 'courses:course_list' %}" class="nav-item">
+                            <i class='bx bx-collection'></i>
+                            <span>Все курсы</span>
+                            <i class='bx bx-chevron-right'></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -80,54 +198,784 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const testForm = document.getElementById('testForm');
-        if (testForm) {
-            testForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const formData = new FormData(this);
-                const submitButton = this.querySelector('button[type="submit"]');
-                
-                submitButton.disabled = true;
-                submitButton.textContent = 'Проверка...';
+{% block extra_css %}
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<style>
+:root {
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --primary-light: #e0e7ff;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --bg-light: #f8fafc;
+    --bg-white: #ffffff;
+    --text-dark: #1e293b;
+    --text-gray: #64748b;
+    --text-light: #94a3b8;
+    --border: #e2e8f0;
+    --radius-lg: 20px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-                fetch("{% url 'courses:submit_test' lesson.id %}", {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    const resultDiv = document.getElementById('result');
-                    if (data.success) {
-                        const percentage = (data.score / data.total_questions * 100).toFixed(1);
-                        resultDiv.innerHTML = `
-                            <div class="alert alert-success">
-                                <h5>Тест завершен!</h5>
-                                <p>Ваш результат: <strong>${data.score}</strong> из <strong>${data.total_questions}</strong></p>
-                                <p>Процент правильных ответов: <strong>${percentage}%</strong></p>
-                                ${percentage >= 80 ? '<p class="text-success">Отличный результат!</p>' : '<p class="text-warning">Попробуйте еще раз!</p>'}
-                            </div>
-                        `;
-                    } else {
-                        resultDiv.innerHTML = `<div class="alert alert-danger">Произошла ошибка при отправке теста.</div>`;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('result').innerHTML = 
-                        '<div class="alert alert-danger">Ошибка сети. Попробуйте еще раз.</div>';
-                })
-                .finally(() => {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Отправить ответы';
-                });
-            });
+.lesson-modern-container {
+    background: var(--bg-light);
+    min-height: 100vh;
+}
+
+/* Navigation */
+.lesson-navigation {
+    background: var(--bg-white);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 0;
+}
+
+.breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.breadcrumb-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-gray);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+}
+
+.breadcrumb-link:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.breadcrumb-divider {
+    color: var(--text-light);
+    font-size: 1.25rem;
+}
+
+.breadcrumb-current {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-dark);
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    background: var(--primary-light);
+    color: var(--primary);
+    border-radius: var(--radius-sm);
+}
+
+/* Layout */
+.lesson-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 2rem;
+    padding: 2rem 0;
+}
+
+/* Video Section */
+.video-section {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.video-header {
+    margin-bottom: 2rem;
+}
+
+.lesson-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.course-badge, .duration-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.course-badge {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.duration-badge {
+    background: var(--bg-light);
+    color: var(--text-gray);
+}
+
+.lesson-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.lesson-description {
+    color: var(--text-gray);
+    line-height: 1.6;
+    font-size: 1.1rem;
+}
+
+/* Video Player */
+.video-player-container {
+    position: relative;
+}
+
+.video-wrapper {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: #000;
+    box-shadow: var(--shadow-lg);
+}
+
+.video-placeholder {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+}
+
+.video-placeholder iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: var(--transition);
+    z-index: 2;
+}
+
+.video-wrapper:hover .video-overlay {
+    opacity: 1;
+}
+
+.play-button {
+    width: 80px;
+    height: 80px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.play-button:hover {
+    background: var(--primary-dark);
+    transform: scale(1.1);
+}
+
+.video-loading {
+    display: none;
+    align-items: center;
+    gap: 1rem;
+    color: white;
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Video Controls */
+.video-controls {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.control-group {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.control-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-dark);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    flex: 1;
+    justify-content: center;
+}
+
+.control-btn:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Кнопка Пройти тест */
+.test-button-container {
+    display: flex;
+    justify-content: center;
+}
+
+.take-test-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, var(--success), #0da271);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
+}
+
+.take-test-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    color: white;
+    background: linear-gradient(135deg, #0da271, #0c9968);
+}
+
+/* Конспект урока */
+.lesson-summary-section {
+    margin-top: 2.5rem;
+    padding: 2rem;
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.section-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-light);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--primary);
+}
+
+.section-info h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.25rem;
+}
+
+.section-info p {
+    color: var(--text-gray);
+    margin: 0;
+}
+
+.summary-content {
+    line-height: 1.7;
+    color: var(--text-dark);
+}
+
+.summary-content h1, .summary-content h2, .summary-content h3, .summary-content h4 {
+    color: var(--text-dark);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.summary-content p {
+    margin-bottom: 1rem;
+}
+
+.summary-content ul, .summary-content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.summary-content li {
+    margin-bottom: 0.5rem;
+}
+
+.summary-content code {
+    background: var(--bg-white);
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--radius-sm);
+    font-family: monospace;
+    border: 1px solid var(--border);
+}
+
+.summary-content pre {
+    background: var(--bg-white);
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+}
+
+/* Что вы узнаете */
+.outcomes-section {
+    margin-top: 2.5rem;
+    padding: 2rem;
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.outcomes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.outcome-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-white);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    transition: var(--transition);
+}
+
+.outcome-item:hover {
+    border-color: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.outcome-check {
+    width: 24px;
+    height: 24px;
+    background: var(--success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.outcome-text {
+    color: var(--text-dark);
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+/* Sidebar Section */
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Progress Card */
+.progress-card {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.progress-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.progress-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-light);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--primary);
+}
+
+.progress-info h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.25rem;
+}
+
+.progress-info p {
+    color: var(--text-gray);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.progress-content {
+    text-align: center;
+}
+
+.progress-circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1.5rem;
+}
+
+.circle-bg {
+    width: 100%;
+    height: 100%;
+    border: 8px solid var(--bg-light);
+    border-radius: 50%;
+    position: absolute;
+}
+
+.circle-progress {
+    width: 100%;
+    height: 100%;
+    border: 8px solid var(--primary);
+    border-radius: 50%;
+    position: absolute;
+    clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+    transform: rotate(0deg);
+    transition: transform 1s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.progress-percent {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.progress-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-gray);
+}
+
+.progress-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--bg-light);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: var(--text-dark);
+}
+
+.stat-item i {
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+/* Navigation Card */
+.lesson-navigation-card {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.lesson-navigation-card h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 1.5rem;
+}
+
+.navigation-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-light);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--text-dark);
+    transition: var(--transition);
+}
+
+.nav-item:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+    transform: translateX(5px);
+}
+
+.nav-item i:last-child {
+    margin-left: auto;
+    color: var(--text-light);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .lesson-layout {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .sidebar-section {
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .lesson-modern-container {
+        padding: 0 0.5rem;
+    }
+    
+    .video-section, .progress-card, .lesson-navigation-card {
+        padding: 1.5rem;
+    }
+    
+    .lesson-title {
+        font-size: 1.5rem;
+    }
+    
+    .control-group {
+        flex-direction: column;
+    }
+    
+    .breadcrumb-nav {
+        font-size: 0.9rem;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .progress-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .lesson-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .lesson-summary-section, .outcomes-section {
+        padding: 1.5rem;
+    }
+    
+    .take-test-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Video progress simulation
+    const progressCircle = document.querySelector('.circle-progress');
+    const progressPercent = document.querySelector('.progress-percent');
+    
+    // Simulate video progress (in real app, this would come from video player API)
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        if (progress < 100) {
+            progress += Math.random() * 5;
+            if (progress > 100) progress = 100;
+            
+            // Update progress circle
+            const degrees = (progress / 100) * 360;
+            progressCircle.style.transform = `rotate(${degrees}deg)`;
+            progressPercent.textContent = Math.round(progress) + '%';
+            
+            // Update stats
+            const statItems = document.querySelectorAll('.stat-item');
+            if (statItems[0]) {
+                statItems[0].querySelector('span').textContent = `Просмотрено: ${Math.round(progress)}%`;
+            }
+            
+            if (progress >= 100 && statItems[1]) {
+                statItems[1].querySelector('span').textContent = 'Тест: Доступен';
+                statItems[1].querySelector('i').style.color = 'var(--success)';
+            }
+        } else {
+            clearInterval(progressInterval);
         }
-    });
+    }, 1000);
+
+    // Video play functionality
+    const videoWrapper = document.querySelector('.video-wrapper');
+    const playButton = document.querySelector('.play-button');
+    const videoIframe = document.querySelector('iframe');
+    
+    if (playButton && videoIframe) {
+        playButton.addEventListener('click', function() {
+            // In a real implementation, this would trigger the YouTube player API
+            const videoUrl = videoIframe.src;
+            if (!videoUrl.includes('autoplay=1')) {
+                videoIframe.src = videoUrl + (videoUrl.includes('?') ? '&' : '?') + 'autoplay=1';
+            }
+            
+            // Hide overlay
+            document.querySelector('.video-overlay').style.opacity = '0';
+        });
+    }
+
+    // Navigation buttons functionality
+    const prevButton = document.getElementById('prevLesson');
+    const nextButton = document.getElementById('nextLesson');
+    
+    if (prevButton) {
+        prevButton.addEventListener('click', function() {
+            // In a real implementation, this would navigate to the previous lesson
+            showNotification('Переход к предыдущему уроку', 'info');
+        });
+    }
+    
+    if (nextButton) {
+        nextButton.addEventListener('click', function() {
+            // In a real implementation, this would navigate to the next lesson
+            showNotification('Переход к следующему уроку', 'info');
+        });
+    }
+
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <i class='bx bx-${type === 'success' ? 'check-circle' : type === 'warning' ? 'error-circle' : type === 'info' ? 'info-circle' : 'x-circle'}'></i>
+            <span>${message}</span>
+        `;
+        
+        // Add styles
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : type === 'info' ? '#3b82f6' : '#ef4444'};
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    // Add CSS for animations
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+});
 </script>
 {% endblock %}
