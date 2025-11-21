@@ -1,5 +1,5 @@
-{% extends 'app/base.html' %}
-{% load static %}
+{% load custom_filters %}
+
 
 {% block content %}
 <div class="test-container">
@@ -45,11 +45,25 @@
                             <i class='bx bx-list-check'></i>
                             {{ questions|length }} вопросов
                         </div>
+                        <div class="time-badge">
+                            <i class='bx bx-time'></i>
+                            ~{{ questions|length }} минут
+                        </div>
                     </div>
                     <h1 class="test-title">Тестирование: {{ lesson.title }}</h1>
                     <p class="test-description">
-                        Проверьте свои знания по пройденному материалу. Для успешного прохождения теста необходимо набрать не менее 80% правильных ответов.
+                        Проверьте свои знания по пройденному материалу. В каждом вопросе выберите один правильный ответ из четырех предложенных вариантов.
                     </p>
+                    <div class="test-rules">
+                        <div class="rule-item">
+                            <i class='bx bx-check-circle'></i>
+                            <span>Для успешного прохождения необходимо набрать <strong>не менее 80%</strong></span>
+                        </div>
+                        <div class="rule-item">
+                            <i class='bx bx-refresh'></i>
+                            <span>Тест можно проходить повторно для улучшения результата</span>
+                        </div>
+                    </div>
                 </div>
 
                 {% if completed_test %}
@@ -60,14 +74,18 @@
                         </div>
                         <div class="result-info">
                             <h4>Предыдущий результат</h4>
-                            <p>Вы уже проходили этот тест</p>
+                            <p>Вы уже проходили этот тест {{ completed_test.completed_at|date:"d.m.Y" }}</p>
                         </div>
-                        <div class="result-score {% if completed_test.score >= 80 %}passed{% else %}failed{% endif %}">
+                        <div class="result-score {% if completed_test.passed %}passed{% else %}failed{% endif %}">
                             {{ completed_test.score }}%
                         </div>
                     </div>
                     <p class="result-note">
-                        Вы можете пройти тест повторно для улучшения результата.
+                        {% if completed_test.passed %}
+                        Отличный результат! Вы можете пройти тест повторно для закрепления знаний.
+                        {% else %}
+                        Попробуйте пройти тест еще раз для улучшения результата.
+                        {% endif %}
                     </p>
                 </div>
                 {% endif %}
@@ -78,6 +96,18 @@
                 {% if questions %}
                 <form id="testForm" class="test-form">
                     {% csrf_token %}
+                    
+                    <!-- Progress Bar -->
+                    <div class="test-progress">
+                        <div class="progress-header">
+                            <span>Прогресс теста</span>
+                            <span class="progress-text">0/{{ questions|length }}</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+
                     <div class="questions-container">
                         {% for question in questions %}
                         <div class="question-card" data-question-id="{{ question.id }}">
@@ -86,6 +116,8 @@
                                 <span class="question-count">из {{ questions|length }}</span>
                             </div>
                             <div class="question-text">{{ question.text }}</div>
+                            
+                            {% if question.answers.all %}
                             <div class="answers-grid">
                                 {% for answer in question.answers.all %}
                                 <label class="answer-option">
@@ -93,22 +125,37 @@
                                            name="question_{{ question.id }}" 
                                            value="{{ answer.id }}"
                                            class="answer-input"
+                                           data-question="{{ question.id }}"
                                            required>
                                     <div class="answer-content">
                                         <div class="answer-radio">
                                             <div class="radio-dot"></div>
                                         </div>
                                         <span class="answer-text">{{ answer.text }}</span>
+                                        <span class="answer-letter">{{ forloop.counter0|add:65|chr_ }}</span>
+
                                     </div>
                                 </label>
                                 {% endfor %}
                             </div>
+                            {% else %}
+                            <div class="no-answers">
+                                <i class='bx bx-error-circle'></i>
+                                <span>Для этого вопроса нет вариантов ответа</span>
+                            </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
 
                     <div class="test-actions">
-                        <button type="submit" class="submit-test-btn">
+                        <div class="actions-info">
+                            <div class="answered-count">
+                                <i class='bx bx-check-circle'></i>
+                                <span>Отвечено: <strong id="answeredCount">0</strong> из {{ questions|length }}</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="submit-test-btn" disabled>
                             <span class="btn-text">Завершить тест</span>
                             <i class='bx bx-check-double'></i>
                             <div class="btn-loading">
@@ -148,6 +195,7 @@
 {% block extra_css %}
 <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
 <style>
+/* Все CSS стили из предыдущего ответа */
 :root {
     --primary: #4f46e5;
     --primary-dark: #4338ca;
@@ -250,7 +298,7 @@
     flex-wrap: wrap;
 }
 
-.lesson-badge, .questions-badge {
+.lesson-badge, .questions-badge, .time-badge {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -270,6 +318,11 @@
     color: var(--text-gray);
 }
 
+.time-badge {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
 .test-title {
     font-size: 2rem;
     font-weight: 700;
@@ -283,6 +336,30 @@
     line-height: 1.6;
     font-size: 1.1rem;
     margin: 0;
+}
+
+.test-rules {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--primary);
+}
+
+.rule-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.rule-item:last-child {
+    margin-bottom: 0;
+}
+
+.rule-item i {
+    color: var(--primary);
+    font-size: 1.1rem;
 }
 
 /* Previous Result */
@@ -364,6 +441,38 @@
 /* Test Form */
 .test-form {
     margin-top: 1rem;
+}
+
+.test-progress {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
 }
 
 .questions-container {
@@ -478,12 +587,64 @@
 .answer-text {
     color: var(--text-dark);
     font-weight: 500;
+    flex: 1;
+}
+
+.answer-letter {
+    width: 24px;
+    height: 24px;
+    background: var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-gray);
+    flex-shrink: 0;
+}
+
+.answer-input:checked + .answer-content .answer-letter {
+    background: var(--primary);
+    color: white;
+}
+
+.no-answers {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--warning-light);
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-sm);
+    color: var(--warning);
 }
 
 /* Test Actions */
 .test-actions {
     margin-top: 2rem;
     text-align: center;
+}
+
+.actions-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+}
+
+.answered-count {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-gray);
+}
+
+.answered-count i {
+    color: var(--success);
 }
 
 .submit-test-btn {
@@ -504,9 +665,15 @@
     overflow: hidden;
 }
 
-.submit-test-btn:hover {
+.submit-test-btn:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
+}
+
+.submit-test-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .btn-loading {
@@ -587,11 +754,129 @@
     margin-bottom: 2rem;
 }
 
+.results-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.summary-item {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-white);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.summary-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.summary-value.correct {
+    color: var(--success);
+}
+
+.summary-value.total {
+    color: var(--primary);
+}
+
+.summary-label {
+    font-size: 0.9rem;
+    color: var(--text-gray);
+}
+
+.detailed-results {
+    margin-top: 2rem;
+    text-align: left;
+}
+
+.result-item {
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    background: var(--bg-white);
+}
+
+.result-item.correct {
+    border-left: 4px solid var(--success);
+}
+
+.result-item.incorrect {
+    border-left: 4px solid var(--error);
+}
+
+.result-question {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-dark);
+    font-size: 1.1rem;
+}
+
+.answer-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.answer-box {
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+}
+
+.user-answer-box {
+    background: var(--primary-light);
+    border: 1px solid var(--primary);
+}
+
+.correct-answer-box {
+    background: var(--success-light);
+    border: 1px solid var(--success);
+}
+
+.answer-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    color: var(--text-gray);
+}
+
+.answer-value {
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.answer-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    margin-top: 0.5rem;
+}
+
+.status-correct {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.status-incorrect {
+    background: var(--error-light);
+    color: var(--error);
+}
+
 .result-actions {
     display: flex;
     gap: 1rem;
     justify-content: center;
     flex-wrap: wrap;
+    margin-top: 2rem;
 }
 
 .result-btn {
@@ -603,6 +888,8 @@
     text-decoration: none;
     font-weight: 600;
     transition: var(--transition);
+    border: none;
+    cursor: pointer;
 }
 
 .btn-retry {
@@ -613,6 +900,7 @@
 .btn-retry:hover {
     background: var(--primary-dark);
     color: white;
+    transform: translateY(-2px);
 }
 
 .btn-lesson {
@@ -623,6 +911,7 @@
 
 .btn-lesson:hover {
     background: var(--bg-light);
+    transform: translateY(-2px);
 }
 
 /* Empty States */
@@ -681,6 +970,11 @@
         font-size: 1.5rem;
     }
     
+    .test-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
     .result-card {
         flex-direction: column;
         text-align: center;
@@ -697,12 +991,26 @@
         gap: 0.5rem;
     }
     
+    .answer-comparison {
+        grid-template-columns: 1fr;
+    }
+    
+    .results-summary {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
     .result-actions {
         flex-direction: column;
     }
     
     .result-btn {
         justify-content: center;
+    }
+    
+    .actions-info {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
     }
 }
 
@@ -724,6 +1032,117 @@
         width: 100%;
         padding: 1rem 2rem;
     }
+    
+    .results-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .summary-item {
+        padding: 0.75rem;
+    }
+    
+    .summary-value {
+        font-size: 1.5rem;
+    }
+}
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10b981;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+    max-width: 400px;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+/* Добавьте эти стили в существующий CSS */
+
+.question-answered {
+    border-left: 4px solid var(--success) !important;
+    background: var(--success-light);
+}
+
+.question-unanswered {
+    border-left: 4px solid var(--warning) !important;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.question-card {
+    transition: all 0.3s ease;
+}
+
+.progress-indicator {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.progress-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.progress-dot.answered {
+    background: var(--success);
+}
+
+.progress-dot.current {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.progress-dot:hover {
+    transform: scale(1.1);
+}
+
+/* Улучшенный прогресс-бар */
+.progress-bar {
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill {
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Анимация для привлечения внимания к неотвеченным вопросам */
+@keyframes highlight {
+    0% { background-color: var(--bg-light); }
+    50% { background-color: var(--warning-light); }
+    100% { background-color: var(--bg-light); }
+}
+
+.question-highlight {
+    animation: highlight 1s ease-in-out;
 }
 </style>
 {% endblock %}
@@ -736,29 +1155,76 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnText = submitBtn?.querySelector('.btn-text');
     const btnLoading = submitBtn?.querySelector('.btn-loading');
     const testResults = document.getElementById('testResults');
+    const progressFill = document.querySelector('.progress-fill');
+    const progressText = document.querySelector('.progress-text');
+    const answeredCount = document.getElementById('answeredCount');
+
+    let totalQuestions = {{ questions|length }};
+    let answeredQuestions = new Set();
+
+    // Track answered questions
+    if (testForm) {
+        const radioInputs = testForm.querySelectorAll('input[type="radio"]');
+        
+        radioInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                const questionId = this.getAttribute('data-question');
+                const questionCard = this.closest('.question-card');
+                const questionRadios = questionCard.querySelectorAll('input[type="radio"]');
+                
+                let hasAnswer = false;
+                questionRadios.forEach(radio => {
+                    if (radio.checked) {
+                        hasAnswer = true;
+                    }
+                });
+                
+                if (hasAnswer) {
+                    answeredQuestions.add(questionId);
+                } else {
+                    answeredQuestions.delete(questionId);
+                }
+                
+                updateProgress();
+            });
+        });
+    }
+
+    function updateProgress() {
+        const currentAnswered = answeredQuestions.size;
+        const progress = (currentAnswered / totalQuestions) * 100;
+        
+        progressFill.style.width = `${progress}%`;
+        progressText.textContent = `${currentAnswered}/${totalQuestions}`;
+        answeredCount.textContent = currentAnswered;
+        
+        submitBtn.disabled = currentAnswered < totalQuestions;
+        updateQuestionStates();
+    }
+
+    function updateQuestionStates() {
+        const questionCards = testForm.querySelectorAll('.question-card');
+        
+        questionCards.forEach(card => {
+            const questionId = card.getAttribute('data-question-id');
+            const isAnswered = answeredQuestions.has(questionId);
+            
+            if (isAnswered) {
+                card.classList.add('question-answered');
+                card.classList.remove('question-unanswered');
+            } else {
+                card.classList.add('question-unanswered');
+                card.classList.remove('question-answered');
+            }
+        });
+    }
 
     if (testForm) {
         testForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            // Check if all questions are answered
-            const unansweredQuestions = Array.from(new Set(
-                Array.from(this.elements)
-                    .filter(el => el.type === 'radio' && !el.checked)
-                    .map(el => el.name)
-            ));
-
-            if (unansweredQuestions.length > 0) {
-                showNotification(`Пожалуйста, ответьте на все вопросы. Осталось: ${unansweredQuestions.length}`, 'warning');
-                
-                // Scroll to first unanswered question
-                const firstUnanswered = document.querySelector(`[name="${unansweredQuestions[0]}"]`);
-                if (firstUnanswered) {
-                    firstUnanswered.closest('.question-card').scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center'
-                    });
-                }
+            if (answeredQuestions.size < totalQuestions) {
+                showNotification(`Пожалуйста, ответьте на все вопросы. Осталось: ${totalQuestions - answeredQuestions.size}`, 'warning');
                 return;
             }
 
@@ -768,7 +1234,6 @@ document.addEventListener('DOMContentLoaded', function() {
             btnLoading.style.display = 'flex';
 
             // Collect answers
-            const formData = new FormData(this);
             const answers = {};
             
             Array.from(this.elements).forEach(el => {
@@ -787,19 +1252,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 }),
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return res.json();
+            })
             .then(data => {
+                console.log('Response data:', data); // Для отладки
+                
                 if (data.success) {
                     showTestResults(data);
                 } else {
-                    showNotification('Ошибка при отправке теста', 'error');
+                    showNotification(data.error || 'Ошибка при отправке теста', 'error');
                 }
             })
             .catch(err => {
-                console.error(err);
+                console.error('Error:', err);
                 showNotification('Ошибка сети. Попробуйте ещё раз.', 'error');
             })
             .finally(() => {
@@ -811,21 +1284,91 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showTestResults(data) {
-        const passed = data.passed;
-        const score = data.score;
+        console.log('Results data:', data); // Для отладки
         
-        testResults.className = passed ? 'test-results result-success' : 'test-results result-failure';
+        // Безопасное извлечение данных с fallback значениями
+        const passed = data.passed || false;
+        const score = data.score !== undefined ? data.score : 0;
+        const correctAnswers = data.correct_answers !== undefined ? data.correct_answers : 0;
+        const totalQuestions = data.total_questions !== undefined ? data.total_questions : {{ questions|length }};
+        
+        // Создаем детальные результаты с проверкой
+        let detailedResultsHTML = '';
+        if (data.detailed_results && Array.isArray(data.detailed_results)) {
+            data.detailed_results.forEach((result, index) => {
+                const isCorrect = result.is_correct || false;
+                const userAnswer = result.user_answer || 'Не ответил';
+                const correctAnswer = result.correct_answer || 'Нет правильного ответа';
+                const questionText = result.question_text || `Вопрос ${index + 1}`;
+                
+                detailedResultsHTML += `
+                    <div class="result-item ${isCorrect ? 'correct' : 'incorrect'}">
+                        <div class="result-question">
+                            Вопрос ${index + 1}: ${questionText}
+                        </div>
+                        <div class="answer-comparison">
+                            <div class="answer-box user-answer-box">
+                                <div class="answer-label">Ваш ответ</div>
+                                <div class="answer-value">${userAnswer}</div>
+                            </div>
+                            <div class="answer-box correct-answer-box">
+                                <div class="answer-label">Правильный ответ</div>
+                                <div class="answer-value">${correctAnswer}</div>
+                            </div>
+                        </div>
+                        <div class="answer-status ${isCorrect ? 'status-correct' : 'status-incorrect'}">
+                            <i class='bx ${isCorrect ? 'bx-check-circle' : 'bx-x-circle'}'></i>
+                            ${isCorrect ? 'Правильно' : 'Неправильно'}
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            // Если нет детальных результатов, показываем общую информацию
+            detailedResultsHTML = `
+                <div class="no-detailed-results">
+                    <i class='bx bx-info-circle'></i>
+                    <p>Детальная информация по ответам недоступна</p>
+                </div>
+            `;
+        }
+        
+        // Определяем класс и иконку результата
+        const resultClass = passed ? 'result-success' : 'result-failure';
+        const resultIcon = passed ? 'bx-trophy' : 'bx-error-circle';
+        const resultTitle = passed ? 'Поздравляем! Тест пройден' : 'Тест не пройден';
+        
+        testResults.className = `test-results ${resultClass}`;
         testResults.innerHTML = `
             <div class="result-icon-large">
-                <i class='bx ${passed ? 'bx-trophy' : 'bx-error-circle'}'></i>
+                <i class='bx ${resultIcon}'></i>
             </div>
-            <h2 class="result-title">
-                ${passed ? 'Поздравляем! Тест пройден' : 'Тест не пройден'}
-            </h2>
+            <h2 class="result-title">${resultTitle}</h2>
             <div class="result-score-large">${score}%</div>
             <div class="result-stats">
-                Правильных ответов: ${data.correct_answers} из ${data.total_questions}
+                Правильных ответов: ${correctAnswers} из ${totalQuestions}
             </div>
+            
+            <div class="results-summary">
+                <div class="summary-item">
+                    <div class="summary-value correct">${correctAnswers}</div>
+                    <div class="summary-label">Правильно</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value incorrect">${totalQuestions - correctAnswers}</div>
+                    <div class="summary-label">Неправильно</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value total">${totalQuestions}</div>
+                    <div class="summary-label">Всего вопросов</div>
+                </div>
+            </div>
+            
+            <div class="detailed-results">
+                <h3 style="margin-bottom: 1rem; text-align: center;">Детальные результаты:</h3>
+                ${detailedResultsHTML}
+            </div>
+            
             <div class="result-actions">
                 ${!passed ? `
                 <button class="result-btn btn-retry" onclick="retryTest()">
@@ -848,27 +1391,26 @@ document.addEventListener('DOMContentLoaded', function() {
         testResults.scrollIntoView({ behavior: 'smooth' });
         
         showNotification(
-            passed ? 'Отличный результат! Тест успешно пройден.' : 'Попробуйте пройти тест еще раз.',
+            passed ? 'Отличный результат! Тест успешно пройден.' : `Для прохождения теста необходимо набрать 80%. Ваш результат: ${score}%`,
             passed ? 'success' : 'warning'
         );
     }
 
-    function retryTest() {
-        // Reset form
-        testForm.reset();
-        testResults.style.display = 'none';
-        
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        showNotification('Тест сброшен. Вы можете пройти его заново.', 'info');
+    window.retryTest = function() {
+        if (testForm) {
+            testForm.reset();
+            testResults.style.display = 'none';
+            answeredQuestions.clear();
+            updateProgress();
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showNotification('Тест сброшен. Вы можете пройти его заново.', 'info');
+        }
     }
 
     function showNotification(message, type) {
-        // Remove existing notifications
         document.querySelectorAll('.notification').forEach(n => n.remove());
         
-        // Create notification element
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.innerHTML = `
@@ -876,46 +1418,61 @@ document.addEventListener('DOMContentLoaded', function() {
             <span>${message}</span>
         `;
         
-        // Add styles
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : type === 'info' ? '#3b82f6' : '#ef4444'};
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            box-shadow: var(--shadow-lg);
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-            max-width: 400px;
-        `;
+        const bgColor = type === 'success' ? '#10b981' : 
+                       type === 'warning' ? '#f59e0b' : 
+                       type === 'info' ? '#3b82f6' : '#ef4444';
+        
+        notification.style.background = bgColor;
         
         document.body.appendChild(notification);
         
-        // Remove after 5 seconds
         setTimeout(() => {
             notification.style.animation = 'slideOut 0.3s ease';
             setTimeout(() => notification.remove(), 300);
         }, 5000);
     }
 
-    // Add CSS for animations
+    // Добавляем CSS для новых классов
     const style = document.createElement('style');
     style.textContent = `
+        .question-answered {
+            border-left: 4px solid var(--success) !important;
+        }
+        
+        .question-unanswered {
+            border-left: 4px solid var(--warning) !important;
+        }
+        
+        .summary-value.incorrect {
+            color: var(--error);
+        }
+        
+        .no-detailed-results {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-gray);
+        }
+        
+        .no-detailed-results i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+        
         @keyframes slideOut {
             from { transform: translateX(0); opacity: 1; }
             to { transform: translateX(100%); opacity: 0; }
         }
     `;
     document.head.appendChild(style);
+
+    // Initialize progress
+    updateProgress();
 });
 </script>
 {% endblock %}

@@ -1,7 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from .models import Course, Lesson, Question, UserCourseAccess, UserProgress, TestResult, CourseApplication
+from .models import Course, Lesson, Question, UserCourseAccess, UserProgress, TestResult, CourseApplication,Answer
+
+class AnswerInline(admin.TabularInline):
+    model = Answer
+    extra = 4
+    min_num = 4  # Минимум 4 ответа (1 правильный, 3 неправильных)
 
 # Базовые админ-классы без сложных полей
 @admin.register(Course)
@@ -17,9 +22,21 @@ class LessonAdmin(admin.ModelAdmin):
 
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ['text', 'lesson']
-    list_filter = ['lesson__course']
-    search_fields = ['text']
+    list_display = ['text', 'lesson', 'get_correct_answer']
+    list_filter = ['lesson']
+    inlines = [AnswerInline]
+    
+    def get_correct_answer(self, obj):
+        correct = obj.answers.filter(is_correct=True).first()
+        return correct.text if correct else "No correct answer"
+    get_correct_answer.short_description = 'Correct Answer'
+
+@admin.register(Answer)
+class AnswerAdmin(admin.ModelAdmin):
+    list_display = ['text', 'question', 'is_correct']
+    list_filter = ['question__lesson', 'is_correct']
+
+
 
 @admin.register(UserCourseAccess)
 class UserCourseAccessAdmin(admin.ModelAdmin):

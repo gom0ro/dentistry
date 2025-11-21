@@ -6,19 +6,19 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
 from django.db.models import Count, Avg
-from .models import Answer, Course, Lesson, TestResult, UserCourseAccess, UserProgress
+from .models import Answer, Course, Lesson, TestResult, UserCourseAccess, UserProgress, Question  # Добавлен Question
 from django.db.models import Q
 from django.urls import reverse
 from django.contrib import messages
 from django.http import JsonResponse
 from .models import CourseApplication, Course
 from .forms import CourseApplicationForm
-from .forms import UserProfileForm, UserSettingsForm
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .forms import UserProfileForm, UserSettingsForm
-from .models import UserProfile
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 
 def home(request):
     courses = Course.objects.filter(is_active=True)
@@ -51,7 +51,6 @@ def search_courses(request):
     return render(request, 'app/search.html', context)
 
 def base(request):
-
     return render(request, 'app/base.html')
 
 def custom_login(request):
@@ -151,6 +150,7 @@ def course_list(request):
         'courses': courses,
         'user_has_access': user_has_access
     })
+
 def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id, is_active=True)
     
@@ -171,6 +171,7 @@ def course_detail(request, course_id):
         'lessons': lessons,  # Добавляем уроки в контекст
         'has_access': has_access
     })
+
 @login_required
 def lesson_detail(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
@@ -202,53 +203,127 @@ def lesson_detail(request, lesson_id):
     })
 
 @login_required
-def submit_test(request, lesson_id):
+def lesson_test(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
-
-    # Проверяем доступ пользователя
-    if not UserCourseAccess.objects.filter(user=request.user, course=lesson.course, is_active=True).exists():
-        return JsonResponse({'success': False, 'error': 'Нет доступа'}, status=403)
-
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Неверный метод'}, status=400)
-
-    questions = lesson.questions.all()
-    total_questions = questions.count()
-
-    if total_questions == 0:
-        return JsonResponse({'success': False, 'error': 'В уроке нет вопросов'}, status=400)
-
-    score = 0
-    for question in questions:
-        selected_id = request.POST.get(f'question_{question.id}')
-        try:
-            answer = Answer.objects.get(id=int(selected_id))
-            if answer.is_correct:
-                score += 1
-        except (Answer.DoesNotExist, TypeError, ValueError):
-            pass
-
-    percentage = round((score / total_questions) * 100, 1)
-    passed = percentage >= 70
-
-    # Сохраняем или обновляем результат
-    test_result, _ = TestResult.objects.update_or_create(
-        user=request.user,
-        lesson=lesson,
-        defaults={'score': score, 'total_questions': total_questions}
-    )
-
-    # Возвращаем redirect_url для JS
-    return JsonResponse({
-        'success': True,
-        'redirect_url': reverse('courses:test_result', args=[lesson.id])
-    })
-
-
-from django.contrib.auth.decorators import login_required
+    questions = lesson.questions.all().prefetch_related('answers')
+    
+    # Получаем предыдущий результат теста
+    completed_test = None
+    if request.user.is_authenticated:
+        completed_test = TestResult.objects.filter(
+            user=request.user, 
+            lesson=lesson
+        ).first()
+    
+    context = {
+        'lesson': lesson,
+        'questions': questions,
+        'completed_test': completed_test,
+    }
+    return render(request, 'courses/lesson_test.html', context)
 
 @login_required
-# app/views.py
+@csrf_exempt
+def submit_test(request, lesson_id):
+    if request.method == 'POST':
+        try:
+            lesson = get_object_or_404(Lesson, id=lesson_id)
+            
+            # Проверяем доступ пользователя
+            if not UserCourseAccess.objects.filter(user=request.user, course=lesson.course, is_active=True).exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Нет доступа к этому курсу'
+                })
+            
+            # Получаем данные
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid JSON format'
+                })
+            
+            user_answers = data.get('answers', {})
+            
+            questions = Question.objects.filter(lesson=lesson).prefetch_related('answers')
+            total_questions = questions.count()
+            correct_answers = 0
+            
+            detailed_results = []
+            
+            for question in questions:
+                user_answer_id = user_answers.get(str(question.id))
+                correct_answer = question.answers.filter(is_correct=True).first()
+                
+                user_answer_text = 'Не ответил'
+                correct_answer_text = 'Нет правильного ответа'
+                is_correct = False
+                
+                if user_answer_id:
+                    try:
+                        user_answer = Answer.objects.get(id=user_answer_id, question=question)
+                        user_answer_text = user_answer.text
+                        if user_answer.is_correct:
+                            correct_answers += 1
+                            is_correct = True
+                    except Answer.DoesNotExist:
+                        user_answer_text = 'Неверный ID ответа'
+                
+                if correct_answer:
+                    correct_answer_text = correct_answer.text
+                
+                detailed_results.append({
+                    'question_id': question.id,
+                    'question_text': question.text,
+                    'user_answer': user_answer_text,
+                    'correct_answer': correct_answer_text,
+                    'is_correct': is_correct
+                })
+            
+            # Рассчитываем результат
+            percentage = round((correct_answers / total_questions) * 100, 1) if total_questions > 0 else 0
+            passed = percentage >= 80
+            
+            # Сохраняем результат
+            test_result, created = TestResult.objects.update_or_create(
+                user=request.user,
+                lesson=lesson,
+                defaults={
+                    'score': percentage,
+                    'correct_answers': correct_answers,
+                    'total_questions': total_questions,
+                    'passed': passed
+                }
+            )
+            
+            # Возвращаем успешный ответ
+            response_data = {
+                'success': True,
+                'score': float(percentage),
+                'correct_answers': correct_answers,
+                'total_questions': total_questions,
+                'passed': bool(passed),
+                'detailed_results': detailed_results
+            }
+            
+            return JsonResponse(response_data)
+            
+        except Exception as e:
+            import traceback
+            print("Error in submit_test:", traceback.format_exc())  # Для отладки
+            return JsonResponse({
+                'success': False,
+                'error': f'Server error: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Only POST method allowed'
+    })
+
+@login_required
 def test_result_view(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
     result = TestResult.objects.filter(
@@ -276,45 +351,6 @@ def custom_logout(request):
         return redirect('courses:course_list')
     
     return redirect('courses:logout_confirm')
-
-@login_required
-def lesson_test(request, lesson_id):
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-    questions = lesson.questions.all()
-
-    if request.method == 'POST':
-        # Здесь можно обработать ответы и сохранить результат
-        correct_answers = 0
-        total_questions = questions.count()
-
-        for question in questions:
-            selected = request.POST.get(f"question_{question.id}")
-            if selected:
-                answer = question.answers.filter(id=selected, is_correct=True).first()
-                if answer:
-                    correct_answers += 1
-
-        # Считаем процент
-        score = int((correct_answers / total_questions) * 100) if total_questions > 0 else 0
-
-        # Сохраняем результат
-        TestResult.objects.update_or_create(
-            user=request.user,
-            lesson=lesson,
-            defaults={
-                'score': score,
-                'total_questions': total_questions
-            }
-        )
-
-        # Можно перенаправить на страницу результатов или обратно на тест
-        return redirect(reverse('courses:lesson_test', args=[lesson.id]))
-
-    context = {
-        'lesson': lesson,
-        'questions': questions
-    }
-    return render(request, 'courses/lesson_test.html', context)
 
 def course_application(request, course_id=None):
     """
@@ -434,3 +470,71 @@ def update_application_status(request, application_id):
             return JsonResponse({'success': False, 'error': 'Заявка не найдена'})
     
     return JsonResponse({'success': False, 'error': 'Неверный метод запроса'})
+
+@login_required
+def course_progress_detail(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Проверяем доступ пользователя к курсу
+    if not UserCourseAccess.objects.filter(user=request.user, course=course, is_active=True).exists():
+        messages.error(request, 'У вас нет доступа к этому курсу.')
+        return redirect('courses:profile')
+    
+    lessons = course.lessons.all().order_by('order')
+    lesson_progress = []
+    
+    completed_lessons = 0
+    total_score = 0
+    test_count = 0
+    
+    for lesson in lessons:
+        progress = UserProgress.objects.filter(user=request.user, lesson=lesson).first()
+        test_result = TestResult.objects.filter(user=request.user, lesson=lesson).first()
+        
+        # Считаем статистику
+        if progress and progress.is_completed:
+            completed_lessons += 1
+        
+        if test_result:
+            total_score += test_result.score
+            test_count += 1
+        
+        lesson_progress.append({
+            'lesson': lesson,
+            'is_completed': progress.is_completed if progress else False,
+            'test_result': test_result,
+            'completed_at': progress.completed_at if progress else None
+        })
+    
+    # Вычисляем статистику
+    total_lessons = lessons.count()
+    pending_lessons = total_lessons - completed_lessons
+    
+    # Средний результат тестов
+    average_score = 0
+    if test_count > 0:
+        average_score = round(total_score / test_count, 1)
+    
+    # Общий прогресс (процент завершенных уроков)
+    overall_progress = 0
+    if total_lessons > 0:
+        overall_progress = round((completed_lessons / total_lessons) * 100, 1)
+    
+    # Находим следующий урок для продолжения
+    next_lesson = None
+    for lesson in lessons:
+        progress = UserProgress.objects.filter(user=request.user, lesson=lesson).first()
+        if not progress or not progress.is_completed:
+            next_lesson = lesson
+            break
+    
+    context = {
+        'course': course,
+        'lesson_progress': lesson_progress,
+        'completed_lessons': completed_lessons,
+        'pending_lessons': pending_lessons,
+        'average_score': average_score,
+        'overall_progress': overall_progress,
+        'next_lesson': next_lesson,
+    }
+    return render(request, 'courses/course_progress.html', context)
